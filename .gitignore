@@ -51,8 +51,8 @@ out/
 coverage/
 .nyc_output/
 
-# Prisma
-apps/backend/prisma/migrations/
+# Prisma — keep migrations, ignore generated client
+# apps/backend/prisma/migrations/
 
 # Redis dump
 dump.rdb

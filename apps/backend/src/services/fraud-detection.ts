@@ -181,12 +181,12 @@ export class FraudDetectionService {
         severity,
         description: `Risk score ${(riskScore * 100).toFixed(0)}% — Signals: ${triggeredSignals.map((s) => s.name).join(", ")}`,
         metadata: {
-          signals: triggeredSignals,
+          signals: triggeredSignals as unknown as Record<string, unknown>[],
           riskScore,
           amount: ctx.amount,
           currency: ctx.currency,
           ipAddress: ctx.ipAddress,
-        },
+        } as object,
       },
     });
   }

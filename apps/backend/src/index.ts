@@ -14,6 +14,7 @@ import { adminRouter } from "./routes/admin";
 import { notificationRouter } from "./routes/notifications";
 import { errorHandler } from "./middleware/error-handler";
 import { requestLogger } from "./middleware/logger";
+import { connectRedis } from "./lib/redis";
 
 dotenv.config();
 
@@ -101,9 +102,12 @@ app.use("/api/v1/notifications", notificationRouter);
 // ============================================================
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Veyra API running on port ${PORT}`);
+app.listen(PORT, async () => {
+  // Try Redis — non-fatal if unavailable
+  await connectRedis();
+  console.log(`🚀 Veyra API running on http://localhost:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`🗄️  Database: PostgreSQL`);
 });
 
 export default app;

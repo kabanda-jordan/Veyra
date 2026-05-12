@@ -1,19 +1,17 @@
-// Prisma client singleton
-// Run `npx prisma generate` before first use
+import { PrismaClient } from "@prisma/client";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let prismaInstance: any;
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
-function getPrismaClient() {
-  if (!prismaInstance) {
-    // Dynamic require so TypeScript doesn't fail before `prisma generate` is run
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaClient } = require("@prisma/client");
-    prismaInstance = new PrismaClient({
-      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-    });
-  }
-  return prismaInstance;
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development"
+      ? ["error", "warn"]
+      : ["error"],
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
 }
-
-export const prisma = getPrismaClient();

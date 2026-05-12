@@ -1,7 +1,22 @@
 import type { Metadata } from "next";
+import { Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-poppins",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Veyra — Biometric Payments",
@@ -31,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-veyra-dark antialiased">
+      <body className={`${poppins.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-veyra-dark antialiased`}>
         <Providers>
           {children}
           <Toaster

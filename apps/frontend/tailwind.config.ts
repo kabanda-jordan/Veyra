@@ -106,8 +106,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "Fira Code", "monospace"],
+        sans: ["var(--font-poppins)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",

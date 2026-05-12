@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: veyra-frontend
+    runtime: node
+    rootDir: apps/frontend
+    buildCommand: npm install --include=optional && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_RP_ID
+        sync: false
+      - key: NEXT_PUBLIC_RP_NAME
+        value: Veyra
+    autoDeploy: true

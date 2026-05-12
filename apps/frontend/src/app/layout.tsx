@@ -30,18 +30,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-veyra-dark antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-background antialiased">
         <Providers>
           {children}
           <Toaster
-            theme="dark"
+            theme="system"
             position="top-right"
             toastOptions={{
               style: {
-                background: "#111118",
-                border: "1px solid #1E1E2E",
-                color: "#fff",
+                background: "var(--toast-bg)",
+                border: "1px solid var(--toast-border)",
+                color: "var(--toast-color)",
               },
             }}
           />

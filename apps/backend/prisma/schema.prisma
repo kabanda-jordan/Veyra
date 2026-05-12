@@ -1,0 +1,431 @@
+// Veyra — Prisma Schema
+// PostgreSQL database schema for the biometric fintech platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USERS
+// ============================================================
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  phone         String?  @unique
+  firstName     String
+  lastName      String
+  avatarUrl     String?
+  dateOfBirth   DateTime?
+  country       String?
+  timezone      String   @default("UTC")
+  locale        String   @default("en-US")
+  isVerified    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  isMerchant    Boolean  @default(false)
+  isAdmin       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  wallets           Wallet[]
+  webauthnCredentials WebAuthnCredential[]
+  devices           Device[]
+  sessions          Session[]
+  notifications     Notification[]
+  kycRecord         KycRecord?
+  fraudEvents       FraudEvent[]
+  auditLogs         AuditLog[]
+  merchantAccount   MerchantAccount?
+  sentTransactions  Transaction[] @relation("SentTransactions")
+  receivedTransactions Transaction[] @relation("ReceivedTransactions")
+  rewards           Reward[]
+
+  @@map("users")
+}
+
+// ============================================================
+// WALLETS
+// ============================================================
+model Wallet {
+  id          String   @id @default(cuid())
+  userId      String
+  currency    String   @default("USD")
+  balance     Decimal  @default(0) @db.Decimal(18, 8)
+  lockedBalance Decimal @default(0) @db.Decimal(18, 8)
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  isFrozen    Boolean  @default(false)
+  walletAddress String @unique @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sentTransactions Transaction[] @relation("WalletSent")
+  receivedTransactions Transaction[] @relation("WalletReceived")
+
+  @@unique([userId, currency])
+  @@map("wallets")
+}
+
+// ============================================================
+// TRANSACTIONS
+// ============================================================
+model Transaction {
+  id              String            @id @default(cuid())
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  amount          Decimal           @db.Decimal(18, 8)
+  currency        String
+  fee             Decimal           @default(0) @db.Decimal(18, 8)
+  exchangeRate    Decimal?          @db.Decimal(18, 8)
+  description     String?
+  reference       String            @unique @default(cuid())
+  metadata        Json?
+
+  // Parties
+  senderId        String?
+  receiverId      String?
+  senderWalletId  String?
+  receiverWalletId String?
+  merchantId      String?
+
+  // Auth
+  authMethod      String?           // "webauthn", "passkey", "pin"
+  deviceId        String?
+  ipAddress       String?
+  userAgent       String?
+
+  // Fraud
+  riskScore       Float?
+  isFlagged       Boolean           @default(false)
+  flagReason      String?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  completedAt     DateTime?
+
+  sender          User?             @relation("SentTransactions", fields: [senderId], references: [id])
+  receiver        User?             @relation("ReceivedTransactions", fields: [receiverId], references: [id])
+  senderWallet    Wallet?           @relation("WalletSent", fields: [senderWalletId], references: [id])
+  receiverWallet  Wallet?           @relation("WalletReceived", fields: [receiverWalletId], references: [id])
+  merchant        MerchantAccount?  @relation(fields: [merchantId], references: [id])
+  refund          Refund?
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  SEND
+  RECEIVE
+  PAYMENT
+  REFUND
+  DEPOSIT
+  WITHDRAWAL
+  EXCHANGE
+  FEE
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+  FLAGGED
+}
+
+// ============================================================
+// MERCHANT ACCOUNTS
+// ============================================================
+model MerchantAccount {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  businessName    String
+  businessType    String?
+  website         String?
+  logoUrl         String?
+  description     String?
+  country         String
+  currency        String   @default("USD")
+  isVerified      Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  settlementDelay Int      @default(1) // days
+  feeRate         Decimal  @default(0.029) @db.Decimal(5, 4) // 2.9%
+  apiKey          String   @unique @default(cuid())
+  webhookUrl      String?
+  webhookSecret   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+  transactions    Transaction[]
+  qrCodes         QRCode[]
+  teamMembers     MerchantTeamMember[]
+
+  @@map("merchant_accounts")
+}
+
+model MerchantTeamMember {
+  id         String   @id @default(cuid())
+  merchantId String
+  email      String
+  role       String   @default("viewer") // owner, admin, viewer
+  invitedAt  DateTime @default(now())
+  joinedAt   DateTime?
+
+  merchant   MerchantAccount @relation(fields: [merchantId], references: [id])
+
+  @@map("merchant_team_members")
+}
+
+// ============================================================
+// WEBAUTHN CREDENTIALS
+// ============================================================
+model WebAuthnCredential {
+  id                String   @id @default(cuid())
+  userId            String
+  credentialId      String   @unique
+  publicKey         Bytes
+  counter           BigInt   @default(0)
+  deviceType        String?  // "platform", "cross-platform"
+  backedUp          Boolean  @default(false)
+  transports        String[] // "internal", "usb", "nfc", "ble"
+  name              String?  // user-given name
+  aaguid            String?  // authenticator AAGUID
+  isActive          Boolean  @default(true)
+  lastUsedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("webauthn_credentials")
+}
+
+// ============================================================
+// DEVICES
+// ============================================================
+model Device {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  type          String   // "mobile", "desktop", "tablet"
+  os            String?
+  browser       String?
+  fingerprint   String   @unique
+  ipAddress     String?
+  location      String?
+  isTrusted     Boolean  @default(false)
+  trustScore    Float    @default(0)
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("devices")
+}
+
+// ============================================================
+// SESSIONS
+// ============================================================
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  refreshToken String  @unique
+  deviceId    String?
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ============================================================
+// KYC RECORDS
+// ============================================================
+model KycRecord {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  status          KycStatus @default(PENDING)
+  level           Int       @default(1) // 1=basic, 2=enhanced, 3=full
+  firstName       String?
+  lastName        String?
+  dateOfBirth     DateTime?
+  nationality     String?
+  documentType    String?
+  documentNumber  String?
+  documentExpiry  DateTime?
+  documentFrontUrl String?
+  documentBackUrl String?
+  selfieUrl       String?
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  state           String?
+  postalCode      String?
+  country         String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@map("kyc_records")
+}
+
+enum KycStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+// ============================================================
+// FRAUD EVENTS
+// ============================================================
+model FraudEvent {
+  id            String   @id @default(cuid())
+  userId        String?
+  transactionId String?
+  type          String   // "velocity", "geo_risk", "device_risk", "pattern"
+  severity      String   // "low", "medium", "high", "critical"
+  description   String
+  metadata      Json?
+  isResolved    Boolean  @default(false)
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  createdAt     DateTime @default(now())
+
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@map("fraud_events")
+}
+
+// ============================================================
+// AUDIT LOGS
+// ============================================================
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String
+  resourceId String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ============================================================
+// QR CODES
+// ============================================================
+model QRCode {
+  id          String   @id @default(cuid())
+  merchantId  String
+  amount      Decimal? @db.Decimal(18, 8)
+  currency    String   @default("USD")
+  description String?
+  reference   String   @unique @default(cuid())
+  isOneTime   Boolean  @default(true)
+  expiresAt   DateTime?
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  merchant    MerchantAccount @relation(fields: [merchantId], references: [id])
+
+  @@map("qr_codes")
+}
+
+// ============================================================
+// REFUNDS
+// ============================================================
+model Refund {
+  id            String        @id @default(cuid())
+  transactionId String        @unique
+  amount        Decimal       @db.Decimal(18, 8)
+  reason        String
+  status        RefundStatus  @default(PENDING)
+  processedAt   DateTime?
+  createdAt     DateTime      @default(now())
+
+  transaction   Transaction   @relation(fields: [transactionId], references: [id])
+
+  @@map("refunds")
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================================
+// REWARDS
+// ============================================================
+model Reward {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // "cashback", "points", "bonus"
+  amount      Decimal  @db.Decimal(18, 8)
+  currency    String   @default("USD")
+  description String
+  expiresAt   DateTime?
+  redeemedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("rewards")
+}
+
+// ============================================================
+// WEBAUTHN CHALLENGES (temporary, stored in Redis ideally)
+// ============================================================
+model WebAuthnChallenge {
+  id        String   @id @default(cuid())
+  userId    String?
+  challenge String   @unique
+  type      String   // "registration", "authentication"
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("webauthn_challenges")
+}

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Fingerprint } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navLinks = [
   { label: "Product", href: "#features" },
@@ -61,10 +60,9 @@ export function LandingNav() {
 
         {/* CTA Buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <ThemeToggle />
           <Link
             href="/auth/login"
-            className="px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
           >
             Sign in
           </Link>

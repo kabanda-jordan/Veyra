@@ -34,10 +34,10 @@ export function DashboardSidebar() {
     <motion.aside
       animate={{ width: collapsed ? 72 : 240 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="relative flex flex-col border-r border-[var(--surface-border)] bg-[var(--surface-card)] overflow-hidden flex-shrink-0"
+      className="relative flex flex-col border-r border-veyra-border bg-veyra-surface overflow-hidden flex-shrink-0"
     >
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-[var(--surface-border)] flex-shrink-0">
+      <div className="h-16 flex items-center px-4 border-b border-veyra-border flex-shrink-0">
         <Link href="/" className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-blue to-neon-green flex items-center justify-center flex-shrink-0 shadow-neon-blue">
             <FingerprintIcon size={16} className="text-white" />
@@ -81,7 +81,7 @@ export function DashboardSidebar() {
       </nav>
 
       {/* Bottom section */}
-      <div className="border-t border-[var(--surface-border)] p-3 space-y-1">
+      <div className="border-t border-veyra-border p-3 space-y-1">
         <Link
           href="/dashboard/help"
           className={`sidebar-item ${collapsed ? "justify-center px-2" : ""}`}
@@ -102,7 +102,7 @@ export function DashboardSidebar() {
       {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-[var(--surface-card)] border border-[var(--surface-border)] flex items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors z-10"
+        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-veyra-card border border-veyra-border flex items-center justify-center text-white/40 hover:text-white transition-colors z-10"
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
